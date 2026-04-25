@@ -1,0 +1,2432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SolarIQ — Solar & Battery Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f2eb;
+  --bg2: #ede9df;
+  --surface: #ffffff;
+  --surface2: #f9f7f2;
+  --border: #ddd8cc;
+  --border2: #ccc6b8;
+  --text: #1a1a14;
+  --muted: #7a7668;
+  --muted2: #a09c90;
+  --sun: #f5a623;
+  --sun2: #e8891a;
+  --solar: #2d7d46;
+  --solar2: #3a9958;
+  --blue: #2563a8;
+  --blue2: #1e4f8a;
+  --accent: #f5a623;
+  --red: #c94040;
+  --green: #2d7d46;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Instrument Sans', sans-serif;
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* NOISE TEXTURE OVERLAY */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+}
+
+/* HEADER */
+header {
+  background: var(--text);
+  color: #f5f2eb;
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-sun {
+  width: 28px;
+  height: 28px;
+  background: var(--sun);
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+  animation: pulse-sun 3s ease-in-out infinite;
+}
+
+@keyframes pulse-sun {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,166,35,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(245,166,35,0); }
+}
+
+.logo-sun::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(245,166,35,0.3);
+}
+
+.header-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: rgba(245,242,235,0.4);
+  text-transform: uppercase;
+}
+
+/* HERO */
+.hero {
+  background: var(--text);
+  color: var(--bg);
+  padding: 70px 40px 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(245,166,35,0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: -80px;
+  left: 20%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(45,125,70,0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--sun);
+  margin-bottom: 18px;
+}
+
+.hero h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(38px, 6vw, 72px);
+  font-weight: 800;
+  line-height: 1.0;
+  letter-spacing: -1.5px;
+  margin-bottom: 20px;
+  max-width: 700px;
+}
+
+.hero h1 em {
+  color: var(--sun);
+  font-style: normal;
+}
+
+.hero p {
+  color: rgba(245,242,235,0.6);
+  font-size: 16px;
+  max-width: 520px;
+  line-height: 1.7;
+}
+
+/* MAIN LAYOUT */
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 40px;
+  position: relative;
+  z-index: 1;
+}
+
+.app-grid {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 28px;
+  align-items: start;
+}
+
+/* STEP CARDS */
+.step-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  transition: box-shadow 0.2s;
+}
+
+.step-card:hover {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+}
+
+.step-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.step-num {
+  width: 32px;
+  height: 32px;
+  background: var(--text);
+  color: var(--bg);
+  border-radius: 50%;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.step-num.active { background: var(--sun); color: var(--text); }
+.step-num.done { background: var(--solar); }
+
+.step-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.step-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.step-body {
+  padding: 24px;
+}
+
+/* FORM ELEMENTS */
+.field-group {
+  margin-bottom: 18px;
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.field-label span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.field-hint {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+}
+
+input[type=number], input[type=text], select {
+  width: 100%;
+  background: var(--bg2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  appearance: none;
+}
+
+input[type=number]:focus, input[type=text]:focus, select:focus {
+  border-color: var(--sun);
+  box-shadow: 0 0 0 3px rgba(245,166,35,0.12);
+}
+
+.input-unit {
+  position: relative;
+}
+
+.input-unit input {
+  padding-right: 52px;
+}
+
+.input-unit .unit {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.fields-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.fields-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+/* APPLIANCE TABLE */
+.appliance-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+}
+
+.appliance-table th {
+  text-align: left;
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.appliance-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border2);
+  vertical-align: middle;
+}
+
+.appliance-table tr:last-child td { border-bottom: none; }
+
+.app-name-input {
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  font-family: 'Instrument Sans', sans-serif;
+  color: var(--text);
+  width: 100%;
+  outline: none;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.app-name-input:focus { background: var(--bg2); }
+
+.app-small-input {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: 'DM Mono', monospace;
+  color: var(--text);
+  width: 70px;
+  text-align: center;
+  outline: none;
+}
+
+.app-small-input:focus { border-color: var(--sun); }
+
+.app-delete {
+  background: none;
+  border: none;
+  color: var(--muted2);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: color 0.15s;
+  line-height: 1;
+}
+
+.app-delete:hover { color: var(--red); }
+
+.app-daily {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--solar);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.add-appliance-btn {
+  background: var(--bg2);
+  border: 1.5px dashed var(--border2);
+  border-radius: 10px;
+  padding: 10px;
+  width: 100%;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.add-appliance-btn:hover {
+  border-color: var(--sun);
+  color: var(--sun2);
+  background: rgba(245,166,35,0.04);
+}
+
+/* PRESET APPLIANCES */
+.preset-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.preset-chip {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-family: 'Instrument Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.preset-chip:hover {
+  background: var(--sun);
+  border-color: var(--sun);
+  color: var(--text);
+}
+
+/* CALCULATE BUTTON */
+.calc-btn {
+  width: 100%;
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: 12px;
+  padding: 16px;
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.calc-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 40%, rgba(245,166,35,0.15));
+  transition: opacity 0.2s;
+  opacity: 0;
+}
+
+.calc-btn:hover {
+  background: var(--sun2);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(245,166,35,0.35);
+}
+
+.calc-btn:hover::before { opacity: 1; }
+
+/* RESULTS PANEL */
+.results-panel {
+  position: sticky;
+  top: 88px;
+}
+
+.results-card {
+  background: var(--text);
+  color: var(--bg);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.results-header {
+  padding: 24px;
+  border-bottom: 1px solid rgba(245,242,235,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.results-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.results-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: rgba(245,166,35,0.15);
+  color: var(--sun);
+  border: 1px solid rgba(245,166,35,0.25);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.results-empty {
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.results-empty .sun-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.3;
+}
+
+.results-empty p {
+  font-size: 13px;
+  color: rgba(245,242,235,0.4);
+  line-height: 1.6;
+}
+
+/* RESULT SECTIONS */
+.result-section {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(245,242,235,0.08);
+}
+
+.result-section-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(245,242,235,0.4);
+  margin-bottom: 14px;
+}
+
+.big-metric {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.big-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 48px;
+  font-weight: 800;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+
+.big-unit {
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  color: rgba(245,242,235,0.5);
+}
+
+.big-label {
+  font-size: 13px;
+  color: rgba(245,242,235,0.5);
+  margin-bottom: 14px;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(245,242,235,0.06);
+  font-size: 13px;
+}
+
+.metric-row:last-child { border-bottom: none; }
+
+.metric-key { color: rgba(245,242,235,0.55); }
+.metric-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--bg);
+}
+
+.metric-val.sun-color { color: var(--sun); }
+.metric-val.green-color { color: #5fdb7e; }
+
+/* RECOMMENDATION HIGHLIGHT */
+.rec-highlight {
+  background: rgba(245,166,35,0.08);
+  border: 1px solid rgba(245,166,35,0.2);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.rec-highlight-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--sun);
+  margin-bottom: 4px;
+}
+
+.rec-highlight-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--bg);
+  margin-bottom: 4px;
+}
+
+.rec-highlight-sub {
+  font-size: 11px;
+  color: rgba(245,242,235,0.45);
+}
+
+.rec-green {
+  background: rgba(45,125,70,0.12);
+  border-color: rgba(45,125,70,0.25);
+}
+
+.rec-green .rec-highlight-title { color: #5fdb7e; }
+
+/* SAVINGS CALLOUT */
+.savings-callout {
+  margin: 0 24px 0;
+  background: linear-gradient(135deg, rgba(245,166,35,0.12), rgba(45,125,70,0.08));
+  border: 1px solid rgba(245,166,35,0.2);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
+.savings-callout .savings-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(245,242,235,0.4);
+  margin-bottom: 4px;
+}
+
+.savings-callout .savings-amount {
+  font-family: 'Syne', sans-serif;
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--sun);
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.savings-callout .savings-period {
+  font-size: 12px;
+  color: rgba(245,242,235,0.45);
+  margin-top: 2px;
+}
+
+.savings-callout .payback {
+  font-size: 12px;
+  color: rgba(245,242,235,0.5);
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(245,242,235,0.08);
+}
+
+/* USAGE BAR */
+.usage-breakdown {
+  margin-top: 12px;
+}
+
+.usage-bar-wrap {
+  background: rgba(245,242,235,0.07);
+  border-radius: 6px;
+  height: 10px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  display: flex;
+  gap: 2px;
+}
+
+.usage-segment {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+.usage-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 10px;
+  color: rgba(245,242,235,0.4);
+  font-family: 'DM Mono', monospace;
+}
+
+.usage-legend span { display: flex; align-items: center; gap: 5px; }
+.usage-legend .dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+/* CONFIDENCE INDICATOR */
+.confidence-bar {
+  margin-top: 16px;
+  padding: 0 24px 20px;
+}
+
+.confidence-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgba(245,242,235,0.4);
+  font-family: 'DM Mono', monospace;
+  margin-bottom: 6px;
+}
+
+.confidence-track {
+  background: rgba(245,242,235,0.08);
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.confidence-fill {
+  height: 100%;
+  background: linear-gradient(to right, var(--sun2), var(--solar2));
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+/* BILL SLIDER DISPLAY */
+.bill-display {
+  text-align: center;
+  padding: 16px;
+  background: var(--bg2);
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.bill-display .bill-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -1px;
+}
+
+.bill-display .bill-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+input[type=range] {
+  width: 100%;
+  appearance: none;
+  background: var(--border);
+  height: 6px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--sun);
+  border: 3px solid var(--surface);
+  box-shadow: 0 2px 8px rgba(245,166,35,0.4);
+  transition: transform 0.15s;
+}
+
+input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.1); }
+
+/* TABS for input mode */
+.input-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg2);
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 18px;
+}
+
+.input-tab {
+  flex: 1;
+  padding: 8px;
+  border-radius: 7px;
+  border: none;
+  background: none;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.input-tab.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+/* TOGGLE */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+.toggle-label { font-size: 13px; font-weight: 500; }
+.toggle-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+.toggle {
+  width: 44px;
+  height: 24px;
+  background: var(--border2);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  border: none;
+  outline: none;
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.toggle.on { background: var(--solar); }
+.toggle.on::after { transform: translateX(20px); }
+
+/* DISCLAIMER */
+.disclaimer {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.6;
+  background: var(--bg2);
+  border-radius: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  margin-top: 20px;
+}
+
+/* BILL UPLOAD MODE */
+.upload-zone {
+  border: 2px dashed var(--border2);
+  border-radius: 14px;
+  padding: 36px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg2);
+  position: relative;
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--sun);
+  background: rgba(245,166,35,0.04);
+}
+.upload-zone input[type=file] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+}
+.upload-icon { font-size: 40px; margin-bottom: 12px; }
+.upload-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.upload-sub { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.upload-formats {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.upload-format {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: var(--border);
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+/* AI READING STATE */
+.ai-reading {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  text-align: center;
+}
+.ai-reading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--border);
+  border-top-color: var(--sun);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.ai-reading-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.ai-reading-sub { font-size: 12px; color: var(--muted); }
+.ai-reading-steps {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+.ai-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--surface);
+  transition: all 0.3s;
+}
+.ai-step.active { color: var(--sun2); background: rgba(245,166,35,0.08); }
+.ai-step.done { color: var(--solar); background: rgba(45,125,70,0.07); }
+.ai-step-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border2);
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.ai-step.active .ai-step-dot { background: var(--sun); animation: pulse-dot 1s ease-in-out infinite; }
+.ai-step.done .ai-step-dot { background: var(--solar); }
+@keyframes pulse-dot {
+  0%,100% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+}
+
+/* EXTRACTED BILL PREVIEW */
+.bill-preview {
+  display: none;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.bill-preview-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+}
+.bill-preview-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bill-preview-title .ai-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  background: rgba(245,166,35,0.15);
+  color: var(--sun2);
+  border: 1px solid rgba(245,166,35,0.3);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.bill-preview-body { padding: 16px 18px; }
+.bill-field-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.bill-field-row:last-child { border-bottom: none; }
+.bill-field-key { color: var(--muted); font-size: 12px; }
+.bill-field-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.bill-field-val.highlight { color: var(--solar); font-size: 15px; }
+.bill-confidence {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(45,125,70,0.08);
+  border: 1px solid rgba(45,125,70,0.2);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--solar);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bill-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.bill-action-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 9px;
+  border: none;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+.bill-action-primary {
+  background: var(--sun);
+  color: var(--text);
+}
+.bill-action-primary:hover { background: var(--sun2); }
+.bill-action-secondary {
+  background: var(--bg);
+  border: 1.5px solid var(--border2);
+  color: var(--muted);
+}
+.bill-action-secondary:hover { border-color: var(--muted); color: var(--text); }
+
+/* bill thumbnail */
+.bill-thumb-wrap {
+  margin-bottom: 14px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  max-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+.bill-thumb-wrap img { max-height: 160px; object-fit: contain; width: 100%; }
+
+.error-box {
+  background: rgba(201,64,64,0.07);
+  border: 1px solid rgba(201,64,64,0.25);
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 13px;
+  color: var(--red);
+  margin-top: 12px;
+  line-height: 1.6;
+}
+
+/* ANIMATIONS */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.result-section, .rec-highlight, .savings-callout {
+  animation: fadeUp 0.4s ease both;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .app-grid { grid-template-columns: 1fr; }
+  .results-panel { position: static; }
+  header { padding: 0 20px; }
+  .hero { padding: 48px 20px 56px; }
+  .app-container { padding: 32px 20px; }
+  .fields-row { grid-template-columns: 1fr; }
+  .fields-row-3 { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
+  .hero h1 { font-size: 34px; }
+  .fields-row-3 { grid-template-columns: 1fr; }
+  .big-num { font-size: 36px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-sun"></div>
+    SolarIQ
+  </div>
+  <div class="header-badge">Solar & Battery Sizing Tool</div>
+</header>
+
+<div class="hero">
+  <div class="hero-eyebrow">// Intelligent Energy Planning</div>
+  <h1>Find your <em>perfect</em><br>solar system size.</h1>
+  <p>Enter your electricity usage details and we'll calculate the optimal solar panel capacity and battery storage for your home — tailored to your location and goals.</p>
+</div>
+
+<div class="app-container">
+  <div class="app-grid">
+
+    <!-- LEFT: INPUTS -->
+    <div>
+
+      <!-- STEP 1: USAGE -->
+      <div class="step-card">
+        <div class="step-header">
+          <div class="step-num active" id="step1num">1</div>
+          <div>
+            <div class="step-title">Your Electricity Usage</div>
+            <div class="step-sub">How much power does your household use?</div>
+          </div>
+        </div>
+        <div class="step-body">
+
+          <div class="input-tabs">
+            <button class="input-tab active" onclick="switchInputMode('upload')">📄 Upload Bill</button>
+            <button class="input-tab" onclick="switchInputMode('bill')">Monthly Bill</button>
+            <button class="input-tab" onclick="switchInputMode('kwh')">kWh Usage</button>
+            <button class="input-tab" onclick="switchInputMode('appliances')">By Appliance</button>
+          </div>
+
+          <!-- UPLOAD BILL MODE -->
+          <div id="mode-upload">
+            <div id="upload-dropzone" class="upload-zone"
+              ondragover="handleDragOver(event)"
+              ondragleave="handleDragLeave(event)"
+              ondrop="handleDrop(event)">
+              <input type="file" id="billFileInput" accept="image/*,.pdf"
+                onchange="handleFileSelected(event)">
+              <div class="upload-icon">📃</div>
+              <div class="upload-title">Drop your electricity bill here</div>
+              <div class="upload-sub">Our AI will read your bill and automatically extract your usage, tariff rate, and billing details.<br><br>
+              <strong style="color:var(--sun2);">Note:</strong> This feature works when viewing inside Claude.ai. Supports PDF, JPG and PNG bills from any Australian or NZ retailer.</div>
+              <div class="upload-formats">
+                <span class="upload-format">JPG</span>
+                <span class="upload-format">PNG</span>
+                <span class="upload-format">PDF</span>
+                <span class="upload-format">WEBP</span>
+              </div>
+            </div>
+
+            <div id="ai-reading-state" style="display:none;" class="ai-reading">
+              <div class="ai-reading-spinner"></div>
+              <div class="ai-reading-title">Reading your bill...</div>
+              <div class="ai-reading-sub">Claude AI is analysing your electricity bill</div>
+              <div class="ai-reading-steps">
+                <div class="ai-step" id="step-upload">
+                  <div class="ai-step-dot"></div>Uploading bill image
+                </div>
+                <div class="ai-step" id="step-read">
+                  <div class="ai-step-dot"></div>Extracting usage data & tariff rates
+                </div>
+                <div class="ai-step" id="step-analyse">
+                  <div class="ai-step-dot"></div>Identifying billing period & consumption patterns
+                </div>
+                <div class="ai-step" id="step-populate">
+                  <div class="ai-step-dot"></div>Populating calculator fields
+                </div>
+              </div>
+            </div>
+
+            <div class="bill-preview" id="bill-preview">
+              <div class="bill-preview-header">
+                <div class="bill-preview-title">
+                  Bill Extracted
+                  <span class="ai-badge">✦ AI Read</span>
+                </div>
+                <button class="bill-action-secondary" style="padding:5px 12px;border-radius:7px;font-size:11px;border:1px solid var(--border2);background:var(--bg);cursor:pointer;font-family:'Instrument Sans',sans-serif;" onclick="resetUpload()">Upload New</button>
+              </div>
+              <div class="bill-preview-body">
+                <div id="bill-thumb-container"></div>
+                <div id="bill-extracted-fields"></div>
+                <div id="bill-confidence-msg"></div>
+                <div class="bill-actions">
+                  <button class="bill-action-btn bill-action-primary" onclick="applyExtractedBill()">✓ Use This Data</button>
+                  <button class="bill-action-btn bill-action-secondary" onclick="switchInputMode('bill')">Enter Manually Instead</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="upload-error" style="display:none;" class="error-box"></div>
+          </div>
+
+          <!-- BILL MODE -->
+          <div id="mode-bill" style="display:none;">
+            <div class="field-group">
+              <div class="field-label">
+                <span>Average Monthly Electricity Bill</span>
+                <span class="field-hint">AUD</span>
+              </div>
+              <div class="bill-display">
+                <div class="bill-num" id="billDisplay">$180</div>
+                <div class="bill-label">per month</div>
+              </div>
+              <input type="range" id="billSlider" min="50" max="800" value="180" step="10" oninput="updateBillDisplay(this.value)">
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:6px;">
+                <span>$50</span><span>$800</span>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="field-label"><span>Electricity Tariff</span><span class="field-hint">¢/kWh</span></div>
+              <div class="input-unit">
+                <input type="number" id="tariff" value="28" min="10" max="60" step="0.5">
+                <span class="unit">¢/kWh</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- KWH MODE -->
+          <div id="mode-kwh" style="display:none;">
+            <div class="fields-row">
+              <div class="field-group">
+                <div class="field-label"><span>Daily Usage</span><span class="field-hint">kWh</span></div>
+                <div class="input-unit">
+                  <input type="number" id="dailyKwh" value="18" min="1" max="200" step="0.5">
+                  <span class="unit">kWh/day</span>
+                </div>
+              </div>
+              <div class="field-group">
+                <div class="field-label"><span>Tariff Rate</span><span class="field-hint">¢/kWh</span></div>
+                <div class="input-unit">
+                  <input type="number" id="tariff2" value="28" min="10" max="60" step="0.5">
+                  <span class="unit">¢/kWh</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- APPLIANCES MODE -->
+          <div id="mode-appliances" style="display:none;">
+            <div class="preset-grid" id="presetGrid"></div>
+            <table class="appliance-table">
+              <thead>
+                <tr>
+                  <th>Appliance</th>
+                  <th>Watts</th>
+                  <th>Hrs/day</th>
+                  <th>Qty</th>
+                  <th>kWh/day</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="applianceBody"></tbody>
+            </table>
+            <button class="add-appliance-btn" onclick="addAppliance()">+ Add Custom Appliance</button>
+            <div style="margin-top:12px;padding:12px;background:var(--bg2);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:13px;color:var(--muted);">Total Daily Usage</span>
+              <span style="font-family:'DM Mono',monospace;font-size:16px;font-weight:500;color:var(--solar)" id="applianceTotalDisplay">0.0 kWh/day</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- STEP 2: LOCATION & CONDITIONS -->
+      <div class="step-card">
+        <div class="step-header">
+          <div class="step-num" id="step2num">2</div>
+          <div>
+            <div class="step-title">Location & Conditions</div>
+            <div class="step-sub">Affects solar generation estimates</div>
+          </div>
+        </div>
+        <div class="step-body">
+          <div class="field-group">
+            <div class="field-label"><span>Your Energy Retailer</span><span class="field-hint">optional</span></div>
+            <select id="retailerSelect">
+              <option value="">— Select your retailer —</option>
+              <optgroup label="Major National Retailers">
+                <option>AGL</option>
+                <option>Origin Energy</option>
+                <option>EnergyAustralia</option>
+              </optgroup>
+              <optgroup label="Queensland">
+                <option>Energex (Ergon)</option>
+                <option>Ergon Energy</option>
+                <option>Lumo Energy</option>
+                <option>Alinta Energy</option>
+                <option>QEnergy</option>
+                <option>Sumo</option>
+                <option>ReAmped Energy</option>
+                <option>Electricity Wizard</option>
+                <option>Click Energy</option>
+                <option>GloBird Energy</option>
+                <option>Momentum Energy</option>
+                <option>Mojo Power</option>
+                <option>OVO Energy</option>
+                <option>Powerclub</option>
+                <option>Tango Energy</option>
+              </optgroup>
+              <optgroup label="New South Wales">
+                <option>Ausgrid (network)</option>
+                <option>Endeavour Energy (network)</option>
+                <option>Essential Energy (network)</option>
+                <option>Red Energy</option>
+                <option>Dodo Power &amp; Gas</option>
+                <option>Commander Power &amp; Gas</option>
+                <option>iSelect Energy</option>
+                <option>Elysian Energy</option>
+                <option>Sumo</option>
+                <option>ReAmped Energy</option>
+                <option>Amber Electric</option>
+                <option>Bright Spark Power</option>
+                <option>Enova Energy</option>
+                <option>Hunter Valley Energy</option>
+                <option>Powerdirect</option>
+                <option>Social Energy</option>
+              </optgroup>
+              <optgroup label="Victoria">
+                <option>CitiPower (network)</option>
+                <option>Powercor (network)</option>
+                <option>United Energy (network)</option>
+                <option>Jemena (network)</option>
+                <option>AusNet Services (network)</option>
+                <option>Red Energy</option>
+                <option>Powershop</option>
+                <option>Simply Energy</option>
+                <option>Sumo</option>
+                <option>GloBird Energy</option>
+                <option>Tango Energy</option>
+                <option>Amber Electric</option>
+                <option>Dodo Power &amp; Gas</option>
+                <option>Nectr</option>
+                <option>OVO Energy</option>
+                <option>Ovo Energy</option>
+                <option>Elysian Energy</option>
+                <option>Momentum Energy</option>
+                <option>Diamond Energy</option>
+                <option>Mojo Power</option>
+                <option>1st Energy</option>
+                <option>CovaU</option>
+                <option>Energy Locals</option>
+                <option>Flow Power</option>
+                <option>Locality Planning Energy</option>
+                <option>Pooled Energy</option>
+                <option>Racv Energy</option>
+                <option>Switch Utilities</option>
+              </optgroup>
+              <optgroup label="South Australia">
+                <option>SA Power Networks (network)</option>
+                <option>AGL</option>
+                <option>Origin Energy</option>
+                <option>EnergyAustralia</option>
+                <option>Simply Energy</option>
+                <option>Lumo Energy</option>
+                <option>Sumo</option>
+                <option>Red Energy</option>
+                <option>GloBird Energy</option>
+                <option>Alinta Energy</option>
+                <option>Amber Electric</option>
+                <option>Diamond Energy</option>
+                <option>Energy Locals</option>
+                <option>Powershop</option>
+                <option>Tango Energy</option>
+              </optgroup>
+              <optgroup label="Western Australia">
+                <option>Synergy (default retailer)</option>
+                <option>Horizon Power (regional)</option>
+                <option>Alinta Energy</option>
+                <option>Kleenheat</option>
+                <option>Sumo</option>
+                <option>Cirro Energy</option>
+                <option>Commander</option>
+                <option>Dodo Power &amp; Gas</option>
+              </optgroup>
+              <optgroup label="Tasmania">
+                <option>TasNetworks (network)</option>
+                <option>Aurora Energy</option>
+                <option>Momentum Energy</option>
+                <option>1st Energy</option>
+                <option>Powershop</option>
+              </optgroup>
+              <optgroup label="ACT">
+                <option>ActewAGL</option>
+                <option>Evoenergy (network)</option>
+                <option>Origin Energy</option>
+                <option>EnergyAustralia</option>
+                <option>Red Energy</option>
+                <option>Amber Electric</option>
+                <option>Powershop</option>
+                <option>Simply Energy</option>
+                <option>Sumo</option>
+              </optgroup>
+              <optgroup label="Northern Territory">
+                <option>Power and Water Corporation</option>
+                <option>Jacana Energy</option>
+              </optgroup>
+              <optgroup label="New Zealand">
+                <option>Contact Energy</option>
+                <option>Genesis Energy</option>
+                <option>Mercury Energy</option>
+                <option>Meridian Energy</option>
+                <option>Nova Energy</option>
+                <option>Flick Electric</option>
+                <option>Electric Kiwi</option>
+                <option>Powershop NZ</option>
+                <option>King Country Energy</option>
+                <option>Pulse Energy</option>
+                <option>Todd Energy</option>
+                <option>Trustpower</option>
+              </optgroup>
+              <optgroup label="Embedded Networks &amp; Community">
+                <option>Strata Energy Services</option>
+                <option>Embedded Network Manager</option>
+                <option>Pooled Energy</option>
+                <option>Locality Planning Energy (LPE)</option>
+                <option>People Energy</option>
+                <option>Eko Energy</option>
+                <option>Nectr (Hanwha)</option>
+                <option>Bright Spark Power</option>
+                <option>Energy Action</option>
+                <option>Urth Energy</option>
+              </optgroup>
+              <optgroup label="Business / Commercial">
+                <option>Flow Power</option>
+                <option>Engie</option>
+                <option>Shell Energy</option>
+                <option>ERM Power</option>
+                <option>Snowy Hydro (retail)</option>
+                <option>Pacific Green Energy</option>
+                <option>Power Ledger</option>
+                <option>Other / Not listed</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <div class="fields-row">
+            <div class="field-group">
+              <div class="field-label"><span>State / Region</span></div>
+              <select id="location">
+                <option value="qld">Queensland</option>
+                <option value="nsw" selected>New South Wales</option>
+                <option value="vic">Victoria</option>
+                <option value="sa">South Australia</option>
+                <option value="wa">Western Australia</option>
+                <option value="tas">Tasmania</option>
+                <option value="act">ACT</option>
+                <option value="nt">Northern Territory</option>
+                <option value="nz_north">NZ — North Island</option>
+                <option value="nz_south">NZ — South Island</option>
+                <option value="custom">Custom (enter peak sun hours)</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <div class="field-label"><span>Roof Orientation</span></div>
+              <select id="roofOrientation">
+                <option value="1.0">North-facing (optimal)</option>
+                <option value="0.93">NE or NW-facing</option>
+                <option value="0.85">East or West-facing</option>
+                <option value="0.75">SE or SW-facing</option>
+                <option value="0.65">South-facing</option>
+                <option value="0.90">Flat roof</option>
+              </select>
+            </div>
+          </div>
+          <div id="customSunHoursField" style="display:none;" class="field-group">
+            <div class="field-label"><span>Peak Sun Hours</span><span class="field-hint">hrs/day</span></div>
+            <div class="input-unit">
+              <input type="number" id="customSunHours" value="4.5" min="2" max="8" step="0.1">
+              <span class="unit">hrs</span>
+            </div>
+          </div>
+          <div class="fields-row">
+            <div class="field-group">
+              <div class="field-label"><span>Roof Tilt</span></div>
+              <select id="roofTilt">
+                <option value="1.0">15–25° (optimal)</option>
+                <option value="0.97">Flat (0°)</option>
+                <option value="0.98">Shallow (5–15°)</option>
+                <option value="0.96">Steep (25–35°)</option>
+                <option value="0.92">Very steep (35°+)</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <div class="field-label"><span>Shading</span></div>
+              <select id="shading">
+                <option value="1.0">None — clear sky</option>
+                <option value="0.95">Minimal (trees far away)</option>
+                <option value="0.88">Moderate (some shading)</option>
+                <option value="0.78">Heavy (significant shade)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: GOALS & PREFERENCES -->
+      <div class="step-card">
+        <div class="step-header">
+          <div class="step-num" id="step3num">3</div>
+          <div>
+            <div class="step-title">Goals & Preferences</div>
+            <div class="step-sub">What matters most to you?</div>
+          </div>
+        </div>
+        <div class="step-body">
+
+          <div class="field-group">
+            <div class="field-label"><span>Primary Goal</span></div>
+            <select id="goal">
+              <option value="selfuse">Maximise self-consumption (reduce bills)</option>
+              <option value="offgrid">Go fully off-grid</option>
+              <option value="export">Maximise solar export (feed-in revenue)</option>
+              <option value="backup">Backup power / resilience focus</option>
+              <option value="balanced">Balanced — savings + backup</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label"><span>Budget Range</span></div>
+            <select id="budget">
+              <option value="economy">Economy (value-focused)</option>
+              <option value="mid" selected>Mid-range</option>
+              <option value="premium">Premium / top-tier components</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">
+              <span>Feed-in Tariff (FiT)</span>
+              <span class="field-hint">¢/kWh exported</span>
+            </div>
+            <div class="input-unit">
+              <input type="number" id="fit" value="6" min="0" max="30" step="0.5">
+              <span class="unit">¢/kWh</span>
+            </div>
+          </div>
+
+          <div class="fields-row">
+            <div class="field-group">
+              <div class="field-label"><span>Household Size</span></div>
+              <select id="householdSize">
+                <option value="1">1 person</option>
+                <option value="2">2 people</option>
+                <option value="3" selected>3–4 people</option>
+                <option value="4">5–6 people</option>
+                <option value="5">7+ people</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <div class="field-label"><span>EV / High load</span></div>
+              <select id="evLoad">
+                <option value="0">No EV</option>
+                <option value="8">1 EV (avg. charging)</option>
+                <option value="16">1 EV (heavy use)</option>
+                <option value="24">2+ EVs</option>
+                <option value="12">Pool pump / HVAC heavy</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Include battery storage</div>
+                <div class="toggle-sub">Recommended for backup & evening use</div>
+              </div>
+              <button class="toggle on" id="batteryToggle" onclick="toggleBattery()"></button>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">EV charger integration</div>
+                <div class="toggle-sub">Size system to include smart EV charging</div>
+              </div>
+              <button class="toggle" id="evToggle" onclick="toggleEV()"></button>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Hot water system (heat pump)</div>
+                <div class="toggle-sub">Use excess solar for hot water</div>
+              </div>
+              <button class="toggle" id="hwToggle" onclick="toggleHW()"></button>
+            </div>
+          </div>
+
+          <button class="calc-btn" onclick="calculate()">
+            ☀️ Calculate My System
+          </button>
+
+        </div>
+      </div>
+
+      <div class="disclaimer">
+        <strong>Disclaimer:</strong> These results are estimates based on typical industry assumptions and publicly available solar irradiance data. Actual system performance varies with specific site conditions, panel brand, inverter efficiency, installer quality, and energy usage patterns. Always obtain quotes from accredited solar installers (CEC-accredited in Australia) before purchasing.
+      </div>
+
+    </div>
+
+    <!-- RIGHT: RESULTS -->
+    <div class="results-panel">
+      <div class="results-card" id="resultsCard">
+        <div class="results-header">
+          <div class="results-title">Your System</div>
+          <div class="results-badge">Recommendation</div>
+        </div>
+        <div id="resultsContent">
+          <div class="results-empty">
+            <div class="sun-icon">☀️</div>
+            <p>Fill in your usage details and click <strong style="color:rgba(245,242,235,0.7)">"Calculate My System"</strong> to see your personalised solar and battery recommendation.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+
+const sunHours = {
+  qld: 5.5, nsw: 4.7, vic: 4.2, sa: 5.0, wa: 5.8,
+  tas: 3.8, act: 4.6, nt: 6.1, nz_north: 4.4, nz_south: 4.0
+};
+
+const presetsData = [
+  { name: '🌡️ Ducted AC', watts: 3500, hrs: 6 },
+  { name: '❄️ Split AC', watts: 1200, hrs: 6 },
+  { name: '🧺 Washing Machine', watts: 800, hrs: 1 },
+  { name: '🍽️ Dishwasher', watts: 1500, hrs: 1 },
+  { name: '🍳 Oven / Cooktop', watts: 2000, hrs: 1 },
+  { name: '🖥️ Desktop PC', watts: 200, hrs: 6 },
+  { name: '📺 TV (large)', watts: 150, hrs: 5 },
+  { name: '💡 Lighting', watts: 200, hrs: 8 },
+  { name: '🚿 Hot Water (elec)', watts: 3600, hrs: 2 },
+  { name: '🏊 Pool Pump', watts: 750, hrs: 8 },
+  { name: '🌀 Dryer', watts: 2500, hrs: 1 },
+  { name: '🍦 Fridge/Freezer', watts: 150, hrs: 24 },
+  { name: '📡 Router/modem', watts: 10, hrs: 24 },
+  { name: '🔌 EV Charging', watts: 7400, hrs: 3 },
+];
+
+const panelPricePerKw = { economy: 950, mid: 1250, premium: 1650 };
+const batteryPricePerKwh = { economy: 900, mid: 1100, premium: 1400 };
+const systemNames = { economy: 'Budget System', mid: 'Standard System', premium: 'Premium System' };
+
+// Track state
+let includeBattery = true;
+let includeEV = false;
+let includeHW = false;
+let inputMode = 'bill';
+let appliances = [];
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('load', () => {
+  renderPresets();
+  addAppliance('❄️ Split AC', 1200, 6, 1);
+  addAppliance('💡 Lighting', 200, 8, 1);
+  addAppliance('🍦 Fridge/Freezer', 150, 24, 1);
+  addAppliance('📺 TV (large)', 150, 5, 1);
+  document.getElementById('location').addEventListener('change', handleLocationChange);
+  handleLocationChange();
+});
+
+function handleLocationChange() {
+  const val = document.getElementById('location').value;
+  document.getElementById('customSunHoursField').style.display = val === 'custom' ? 'block' : 'none';
+}
+
+// ============================================================
+// TOGGLES
+// ============================================================
+function toggleBattery() {
+  includeBattery = !includeBattery;
+  const btn = document.getElementById('batteryToggle');
+  btn.classList.toggle('on', includeBattery);
+}
+
+function toggleEV() {
+  includeEV = !includeEV;
+  const btn = document.getElementById('evToggle');
+  btn.classList.toggle('on', includeEV);
+}
+
+function toggleHW() {
+  includeHW = !includeHW;
+  const btn = document.getElementById('hwToggle');
+  btn.classList.toggle('on', includeHW);
+}
+
+// ============================================================
+// BILL UPLOAD & AI READING
+// ============================================================
+let extractedBillData = null;
+
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('upload-dropzone').classList.add('dragover');
+}
+function handleDragLeave(e) {
+  document.getElementById('upload-dropzone').classList.remove('dragover');
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-dropzone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+}
+function handleFileSelected(e) {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+}
+
+function resetUpload() {
+  document.getElementById('upload-dropzone').style.display = 'block';
+  document.getElementById('ai-reading-state').style.display = 'none';
+  document.getElementById('bill-preview').style.display = 'none';
+  document.getElementById('upload-error').style.display = 'none';
+  document.getElementById('billFileInput').value = '';
+  extractedBillData = null;
+  ['step-upload','step-read','step-analyse','step-populate'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('active','done');
+  });
+}
+
+async function processFile(file) {
+  // Validate
+  const allowed = ['image/jpeg','image/jpg','image/png','image/webp','image/gif','application/pdf'];
+  if (!allowed.includes(file.type)) {
+    showUploadError('Please upload a JPG, PNG, WEBP, or PDF file of your electricity bill.');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    showUploadError('File is too large. Please upload a file under 10MB.');
+    return;
+  }
+
+  // Show reading state
+  document.getElementById('upload-dropzone').style.display = 'none';
+  document.getElementById('ai-reading-state').style.display = 'block';
+  document.getElementById('bill-preview').style.display = 'none';
+  document.getElementById('upload-error').style.display = 'none';
+
+  const steps = ['step-upload','step-read','step-analyse','step-populate'];
+
+  function setStep(idx) {
+    steps.forEach((id, i) => {
+      const el = document.getElementById(id);
+      el.classList.remove('active','done');
+      if (i < idx) el.classList.add('done');
+      if (i === idx) el.classList.add('active');
+    });
+  }
+
+  try {
+    setStep(0);
+    await delay(400);
+
+    // Convert file to base64
+    const { base64, mediaType, previewUrl } = await fileToBase64(file);
+
+    setStep(1);
+    await delay(300);
+
+    // Call Claude API with vision
+    const prompt = `You are an expert at reading Australian and New Zealand electricity bills. 
+
+Carefully analyse this electricity bill image and extract ALL of the following information. Return ONLY a valid JSON object with these exact fields (use null for any field you cannot find):
+
+{
+  "retailer": "string — name of the electricity retailer/provider",
+  "accountName": "string — customer name on the bill",
+  "billPeriodDays": "number — number of days in the billing period",
+  "billStartDate": "string — billing period start date",
+  "billEndDate": "string — billing period end date",
+  "totalAmountDue": "number — total amount due in dollars (just the number, no $)",
+  "electricityChargesOnly": "number — electricity charges only, excluding supply charges/fees if listed separately",
+  "totalKwhUsed": "number — total kWh consumed in this billing period",
+  "dailyKwhAverage": "number — average daily kWh usage (if shown, otherwise calculate from totalKwhUsed / billPeriodDays)",
+  "peakKwh": "number — peak/on-peak kWh if time-of-use tariff (null if flat rate)",
+  "offPeakKwh": "number — off-peak kWh if time-of-use tariff (null if flat rate)",
+  "shoulderKwh": "number — shoulder kWh if applicable (null otherwise)",
+  "usageRateCentsPerKwh": "number — usage charge rate in cents per kWh (most common rate if multiple)",
+  "peakRateCentsPerKwh": "number — peak rate in cents/kWh if ToU tariff",
+  "offPeakRateCentsPerKwh": "number — off-peak rate in cents/kWh if ToU tariff",
+  "supplyChargeCentsPerDay": "number — daily supply charge in cents per day",
+  "feedInTariffCentsPerKwh": "number — feed-in tariff rate if shown (null if not solar customer)",
+  "solarExportKwh": "number — kWh exported to grid if shown (null if not applicable)",
+  "tariffType": "string — 'flat', 'time-of-use', 'demand', or 'unknown'",
+  "state": "string — Australian state or NZ (e.g. 'NSW', 'QLD', 'VIC', 'SA', 'WA', 'TAS', 'ACT', 'NT', 'NZ')",
+  "propertyAddress": "string — service address (suburb/city only, no full street address for privacy)",
+  "controlledLoad": "number — controlled load kWh if shown (null otherwise)",
+  "controlledLoadRate": "number — controlled load rate cents/kWh if shown",
+  "hasExistingSolar": "boolean — true if customer already has solar",
+  "previousBillAmount": "number — previous bill amount if shown",
+  "confidenceScore": "number between 0-100 — your confidence in the extracted data accuracy",
+  "notes": "string — any important notes, unusual tariff structures, or caveats about the data"
+}
+
+Return ONLY the JSON object, no other text, no markdown code blocks.`;
+
+    setStep(2);
+
+    // Build the correct content block — PDFs use 'document' type, images use 'image' type
+    const isPDF = file.type === 'application/pdf';
+    const fileContentBlock = isPDF
+      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
+      : { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } };
+
+    const requestBody = {
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1500,
+      messages: [{
+        role: 'user',
+        content: [ fileContentBlock, { type: 'text', text: prompt } ]
+      }]
+    };
+
+    // Call our backend proxy (keeps API key secure on the server)
+    const response = await fetch('/api/read-bill', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      let errMsg = `API error ${response.status}`;
+      try { const err = await response.json(); errMsg = err.error?.message || errMsg; } catch(e) {}
+      throw new Error(errMsg);
+    }
+
+    const data = await response.json();
+    const rawText = data.content.map(c => c.text || '').join('').trim();
+
+    setStep(3);
+    await delay(300);
+
+    // Parse JSON — strip any markdown fences Claude may have added
+    let parsed;
+    try {
+      const cleaned = rawText.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();
+      parsed = JSON.parse(cleaned);
+    } catch(e) {
+      console.error('Raw AI response was:', rawText);
+      throw new Error('AI returned an unexpected format. Please try again or enter details manually.');
+    }
+
+    extractedBillData = { ...parsed, previewUrl, fileName: file.name };
+
+    await delay(300);
+    setStep(4);
+    await delay(400);
+
+    showExtractedBill(extractedBillData);
+
+  } catch (err) {
+    console.error('Bill reading error:', err);
+    document.getElementById('ai-reading-state').style.display = 'none';
+    document.getElementById('upload-dropzone').style.display = 'block';
+    
+    let userMsg = err.message || 'Unknown error';
+    
+    // Provide specific guidance based on error type
+    if (userMsg.toLowerCase().includes('failed to fetch') || userMsg.toLowerCase().includes('networkerror') || userMsg.toLowerCase().includes('load failed')) {
+      userMsg = `Network error: The bill reader requires an active internet connection and the app must be opened inside Claude.ai (not as a downloaded file). <br><br>
+      <strong>To fix:</strong> Make sure you are viewing this app inside the Claude.ai chat window, not a downloaded file. Then try again.<br><br>
+      In the meantime, use the <strong>"Monthly Bill"</strong> tab to enter your details manually.`;
+    } else if (userMsg.toLowerCase().includes('401') || userMsg.toLowerCase().includes('403') || userMsg.toLowerCase().includes('unauthorized')) {
+      userMsg = `Authentication error. Please ensure the app is open inside Claude.ai.`;
+    } else if (userMsg.toLowerCase().includes('413') || userMsg.toLowerCase().includes('too large')) {
+      userMsg = `File too large. Please compress your PDF or take a photo of the bill instead (under 5MB).`;
+    } else if (userMsg.toLowerCase().includes('unsupported') || userMsg.toLowerCase().includes('media_type')) {
+      userMsg = `This file type is not supported. Please upload a JPG, PNG or PDF of your electricity bill.`;
+    }
+    
+    showUploadError(userMsg);
+  }
+}
+
+function showExtractedBill(d) {
+  document.getElementById('ai-reading-state').style.display = 'none';
+  const preview = document.getElementById('bill-preview');
+  preview.style.display = 'block';
+
+  // Thumbnail
+  const thumbContainer = document.getElementById('bill-thumb-container');
+  if (d.previewUrl && !d.previewUrl.startsWith('data:application/pdf')) {
+    thumbContainer.innerHTML = `<div class="bill-thumb-wrap"><img src="${d.previewUrl}" alt="Bill preview"></div>`;
+  } else {
+    thumbContainer.innerHTML = `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;margin-bottom:14px;font-size:12px;color:var(--muted);">📄 ${d.fileName || 'Bill uploaded'}</div>`;
+  }
+
+  // Fields
+  const fields = document.getElementById('bill-extracted-fields');
+  const rows = [
+    { key: 'Retailer', val: d.retailer || 'Not detected' },
+    { key: 'Billing period', val: d.billPeriodDays ? `${d.billPeriodDays} days` + (d.billStartDate ? ` (${d.billStartDate} – ${d.billEndDate})` : '') : 'Not detected' },
+    { key: 'Total kWh used', val: d.totalKwhUsed ? `${d.totalKwhUsed} kWh` : 'Not detected', highlight: !!d.totalKwhUsed },
+    { key: 'Daily average', val: d.dailyKwhAverage ? `${Number(d.dailyKwhAverage).toFixed(1)} kWh/day` : 'Not detected', highlight: !!d.dailyKwhAverage },
+    { key: 'Usage rate', val: d.usageRateCentsPerKwh ? `${d.usageRateCentsPerKwh}¢/kWh` : (d.peakRateCentsPerKwh ? `Peak: ${d.peakRateCentsPerKwh}¢ / Off-peak: ${d.offPeakRateCentsPerKwh}¢` : 'Not detected') },
+    { key: 'Total bill amount', val: d.totalAmountDue ? `$${Number(d.totalAmountDue).toFixed(2)}` : 'Not detected', highlight: !!d.totalAmountDue },
+    { key: 'Tariff type', val: d.tariffType ? d.tariffType.charAt(0).toUpperCase() + d.tariffType.slice(1) : 'Unknown' },
+    { key: 'State / Region', val: d.state || 'Not detected' },
+    d.hasExistingSolar ? { key: 'Existing solar', val: `Yes — ${d.solarExportKwh ? d.solarExportKwh + ' kWh exported' : 'detected'}` } : null,
+    d.feedInTariffCentsPerKwh ? { key: 'Feed-in tariff', val: `${d.feedInTariffCentsPerKwh}¢/kWh` } : null,
+  ].filter(Boolean);
+
+  fields.innerHTML = rows.map(r => `
+    <div class="bill-field-row">
+      <span class="bill-field-key">${r.key}</span>
+      <span class="bill-field-val ${r.highlight ? 'highlight' : ''}">${r.val}</span>
+    </div>`).join('');
+
+  // Confidence
+  const conf = d.confidenceScore || 70;
+  const confColor = conf >= 85 ? 'var(--solar)' : conf >= 65 ? 'var(--sun2)' : 'var(--red)';
+  document.getElementById('bill-confidence-msg').innerHTML = `
+    <div class="bill-confidence" style="color:${confColor};background:${conf>=85?'rgba(45,125,70,0.08)':conf>=65?'rgba(245,166,35,0.08)':'rgba(201,64,64,0.07)'};border-color:${confColor}30;">
+      <span>✦</span>
+      <span>AI confidence: <strong>${conf}%</strong>${conf < 75 ? ' — please verify key figures before calculating' : ' — data looks good'}</span>
+    </div>
+    ${d.notes ? `<div style="margin-top:8px;font-size:11px;color:var(--muted);line-height:1.6;">📝 ${d.notes}</div>` : ''}`;
+}
+
+function applyExtractedBill() {
+  if (!extractedBillData) return;
+  const d = extractedBillData;
+
+  // Switch to bill mode and populate
+  switchInputMode('bill');
+
+  // Set monthly bill amount
+  if (d.totalAmountDue) {
+    // Annualise if needed based on billing days
+    const monthlyBill = d.billPeriodDays
+      ? Math.round((d.totalAmountDue / d.billPeriodDays) * 30)
+      : d.totalAmountDue;
+    const slider = document.getElementById('billSlider');
+    const clampedBill = Math.min(800, Math.max(50, monthlyBill));
+    slider.value = clampedBill;
+    updateBillDisplay(clampedBill);
+  }
+
+  // Set tariff
+  if (d.usageRateCentsPerKwh) {
+    document.getElementById('tariff').value = d.usageRateCentsPerKwh;
+    document.getElementById('tariff2').value = d.usageRateCentsPerKwh;
+  } else if (d.peakRateCentsPerKwh) {
+    // Use weighted average for ToU
+    const avg = d.offPeakKwh && d.peakKwh
+      ? ((d.peakRateCentsPerKwh * d.peakKwh) + (d.offPeakRateCentsPerKwh * d.offPeakKwh)) / (d.peakKwh + d.offPeakKwh)
+      : d.peakRateCentsPerKwh;
+    document.getElementById('tariff').value = avg.toFixed(1);
+    document.getElementById('tariff2').value = avg.toFixed(1);
+  }
+
+  // Set daily kWh if we have it
+  if (d.dailyKwhAverage) {
+    document.getElementById('dailyKwh').value = Number(d.dailyKwhAverage).toFixed(1);
+  }
+
+  // Set feed-in tariff
+  if (d.feedInTariffCentsPerKwh) {
+    document.getElementById('fit').value = d.feedInTariffCentsPerKwh;
+  }
+
+  // Set retailer if detected
+  if (d.retailer) {
+    const sel = document.getElementById('retailerSelect');
+    if (sel) {
+      const opts = Array.from(sel.options);
+      const match = opts.find(o => o.text.toLowerCase().includes(d.retailer.toLowerCase()) || d.retailer.toLowerCase().includes(o.text.toLowerCase()));
+      if (match) sel.value = match.value;
+    }
+  }
+
+  // Set location if state detected
+  if (d.state) {
+    const stateMap = {
+      'NSW': 'nsw', 'QLD': 'qld', 'VIC': 'vic', 'SA': 'sa',
+      'WA': 'wa', 'TAS': 'tas', 'ACT': 'act', 'NT': 'nt',
+      'NZ': 'nz_north', 'NEW ZEALAND': 'nz_north'
+    };
+    const loc = stateMap[d.state.toUpperCase()];
+    if (loc) document.getElementById('location').value = loc;
+  }
+
+  // Show a success message
+  const notice = document.createElement('div');
+  notice.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a14;color:#f5f2eb;padding:12px 24px;border-radius:12px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.25);';
+  notice.textContent = '✓ Bill data applied — check details then Calculate';
+  document.body.appendChild(notice);
+  setTimeout(() => notice.remove(), 3500);
+}
+
+function showUploadError(msg) {
+  const el = document.getElementById('upload-error');
+  el.style.display = 'block';
+  el.innerHTML = `⚠️ ${msg}`;
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      const base64 = result.split(',')[1];
+      const mediaType = file.type || 'image/jpeg';
+      const previewUrl = result;
+      resolve({ base64, mediaType, previewUrl });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ============================================================
+// INPUT MODES
+// ============================================================
+function switchInputMode(mode) {
+  inputMode = mode === 'upload' ? 'bill' : mode;
+  document.querySelectorAll('.input-tab').forEach((t, i) => {
+    t.classList.toggle('active', ['upload','bill','kwh','appliances'][i] === mode);
+  });
+  document.getElementById('mode-upload').style.display = mode === 'upload' ? 'block' : 'none';
+  document.getElementById('mode-bill').style.display = mode === 'bill' ? 'block' : 'none';
+  document.getElementById('mode-kwh').style.display = mode === 'kwh' ? 'block' : 'none';
+  document.getElementById('mode-appliances').style.display = mode === 'appliances' ? 'block' : 'none';
+}
+
+function updateBillDisplay(val) {
+  document.getElementById('billDisplay').textContent = `$${val}`;
+}
+
+// ============================================================
+// APPLIANCES
+// ============================================================
+function renderPresets() {
+  const grid = document.getElementById('presetGrid');
+  grid.innerHTML = presetsData.map(p =>
+    `<button class="preset-chip" onclick="addFromPreset('${p.name.replace(/'/g,"\\'")}', ${p.watts}, ${p.hrs})">
+      ${p.name}
+    </button>`
+  ).join('');
+}
+
+function addFromPreset(name, watts, hrs) {
+  addAppliance(name, watts, hrs, 1);
+}
+
+function addAppliance(name = 'New appliance', watts = 500, hrs = 4, qty = 1) {
+  appliances.push({ id: Date.now() + Math.random(), name, watts, hrs, qty });
+  renderAppliances();
+}
+
+function renderAppliances() {
+  const tbody = document.getElementById('applianceBody');
+  tbody.innerHTML = appliances.map(a => {
+    const daily = ((a.watts * a.hrs * a.qty) / 1000).toFixed(2);
+    return `<tr>
+      <td><input class="app-name-input" value="${a.name}" onchange="updateAppliance(${a.id}, 'name', this.value)"></td>
+      <td><input class="app-small-input" type="number" value="${a.watts}" onchange="updateAppliance(${a.id}, 'watts', this.value)"></td>
+      <td><input class="app-small-input" type="number" value="${a.hrs}" min="0" max="24" onchange="updateAppliance(${a.id}, 'hrs', this.value)"></td>
+      <td><input class="app-small-input" type="number" value="${a.qty}" min="1" max="20" onchange="updateAppliance(${a.id}, 'qty', this.value)"></td>
+      <td class="app-daily">${daily}</td>
+      <td><button class="app-delete" onclick="deleteAppliance(${a.id})">×</button></td>
+    </tr>`;
+  }).join('');
+  updateApplianceTotal();
+}
+
+function updateAppliance(id, field, value) {
+  const a = appliances.find(x => x.id === id);
+  if (a) {
+    a[field] = field === 'name' ? value : parseFloat(value) || 0;
+    renderAppliances();
+  }
+}
+
+function deleteAppliance(id) {
+  appliances = appliances.filter(x => x.id !== id);
+  renderAppliances();
+}
+
+function updateApplianceTotal() {
+  const total = appliances.reduce((sum, a) => sum + (a.watts * a.hrs * a.qty) / 1000, 0);
+  document.getElementById('applianceTotalDisplay').textContent = `${total.toFixed(1)} kWh/day`;
+  return total;
+}
+
+function getApplianceBreakdown() {
+  const total = appliances.reduce((sum, a) => sum + (a.watts * a.hrs * a.qty) / 1000, 0);
+  return appliances.map(a => ({
+    name: a.name,
+    daily: (a.watts * a.hrs * a.qty) / 1000,
+    pct: total > 0 ? ((a.watts * a.hrs * a.qty) / 1000) / total * 100 : 0
+  })).sort((a, b) => b.daily - a.daily);
+}
+
+// ============================================================
+// MAIN CALCULATION
+// ============================================================
+function getDailyUsage() {
+  if (inputMode === 'bill') {
+    const bill = parseFloat(document.getElementById('billSlider').value) || 180;
+    const tariff = parseFloat(document.getElementById('tariff').value) || 28;
+    return (bill / (tariff / 100)) / 30;
+  } else if (inputMode === 'kwh') {
+    return parseFloat(document.getElementById('dailyKwh').value) || 18;
+  } else {
+    return updateApplianceTotal();
+  }
+}
+
+function calculate() {
+  const dailyUsage = getDailyUsage();
+  const location = document.getElementById('location').value;
+  const orientation = parseFloat(document.getElementById('roofOrientation').value);
+  const tilt = parseFloat(document.getElementById('roofTilt').value);
+  const shading = parseFloat(document.getElementById('shading').value);
+  const goal = document.getElementById('goal').value;
+  const budget = document.getElementById('budget').value;
+  const tariff = parseFloat(document.getElementById('tariff').value ||
+    document.getElementById('tariff2').value || 28);
+  const fit = parseFloat(document.getElementById('fit').value) || 6;
+  const evExtra = includeEV ? parseFloat(document.getElementById('evLoad').value) || 0 : 0;
+  const hwExtra = includeHW ? 4.5 : 0;
+
+  const basePeakSun = location === 'custom'
+    ? parseFloat(document.getElementById('customSunHours').value) || 4.5
+    : sunHours[location] || 4.7;
+
+  const effectiveSunHours = basePeakSun * orientation * tilt * shading;
+  const systemEfficiency = 0.80; // inverter + cable + temp derating
+
+  // Total effective daily demand including extras
+  const totalDailyDemand = dailyUsage + evExtra + hwExtra;
+
+  // Goal modifiers
+  let goalMultiplier = 1.0;
+  let batteryGoalMultiplier = 1.0;
+  if (goal === 'offgrid') { goalMultiplier = 1.3; batteryGoalMultiplier = 2.0; }
+  if (goal === 'export') { goalMultiplier = 1.5; batteryGoalMultiplier = 0.5; }
+  if (goal === 'backup') { batteryGoalMultiplier = 1.5; }
+  if (goal === 'selfuse') { batteryGoalMultiplier = 1.0; }
+  if (goal === 'balanced') { batteryGoalMultiplier = 1.2; }
+
+  // Solar panel sizing (kW)
+  const rawSolarKw = (totalDailyDemand * goalMultiplier) / (effectiveSunHours * systemEfficiency);
+  const solarKw = Math.ceil(rawSolarKw * 2) / 2; // round up to nearest 0.5 kW
+
+  // Panel count (assuming 400W panels)
+  const panelWatts = 400;
+  const panelCount = Math.ceil((solarKw * 1000) / panelWatts);
+  const actualSolarKw = (panelCount * panelWatts) / 1000;
+
+  // Daily solar generation
+  const dailyGeneration = actualSolarKw * effectiveSunHours * systemEfficiency;
+
+  // Self-consumption estimate (typically 30-40% without battery, 70-90% with)
+  const selfConsumptionRate = includeBattery ? 0.78 : 0.36;
+  const dailySelfConsumed = Math.min(dailyGeneration * selfConsumptionRate, totalDailyDemand);
+  const dailyExported = dailyGeneration - dailySelfConsumed;
+  const dailyGridImport = Math.max(0, totalDailyDemand - dailySelfConsumed);
+
+  // Battery sizing
+  let batteryKwh = 0;
+  let batteryUnits = 0;
+  if (includeBattery) {
+    // Cover evening/overnight usage (typically 60-70% of total daily) + goal factor
+    const eveningUsage = totalDailyDemand * 0.62;
+    const rawBattery = eveningUsage * batteryGoalMultiplier;
+    batteryKwh = Math.ceil(rawBattery / 5) * 5; // round to nearest 5 kWh
+    batteryKwh = Math.max(5, Math.min(batteryKwh, 60));
+    batteryUnits = Math.ceil(batteryKwh / 10); // assume 10kWh per unit
+  }
+
+  // Inverter sizing
+  const inverterKw = Math.ceil(actualSolarKw / 0.5) * 0.5;
+
+  // Cost estimation
+  const solarCost = actualSolarKw * panelPricePerKw[budget];
+  const batteryCost = includeBattery ? batteryKwh * batteryPricePerKwh[budget] : 0;
+  const installBase = budget === 'economy' ? 1800 : budget === 'mid' ? 2400 : 3200;
+  const totalCost = solarCost + batteryCost + installBase;
+
+  // Savings calculation
+  const annualGridSavings = dailySelfConsumed * (tariff / 100) * 365;
+  const annualExportRevenue = dailyExported * (fit / 100) * 365;
+  const annualSavings = annualGridSavings + annualExportRevenue;
+  const paybackYears = annualSavings > 0 ? (totalCost / annualSavings) : 0;
+
+  // 10 year savings
+  const lifespan25yr = annualSavings * 25;
+
+  // Confidence score
+  const confidence = Math.min(95, 60 +
+    (inputMode === 'appliances' ? 20 : inputMode === 'kwh' ? 10 : 0) +
+    (shading === 1.0 ? 10 : shading >= 0.95 ? 5 : 0) +
+    (location !== 'custom' ? 5 : 0));
+
+  // Autonomy %
+  const autonomyPct = Math.round((dailySelfConsumed / totalDailyDemand) * 100);
+
+  // CO2 savings (0.79kg per kWh in AU grid average)
+  const co2Annual = dailySelfConsumed * 0.79 * 365;
+
+  // Get bill display
+  const bill = inputMode === 'bill' ? parseFloat(document.getElementById('billSlider').value) : null;
+
+  renderResults({
+    dailyUsage: totalDailyDemand,
+    solarKw: actualSolarKw,
+    panelCount,
+    panelWatts,
+    inverterKw,
+    batteryKwh,
+    batteryUnits,
+    dailyGeneration,
+    dailySelfConsumed,
+    dailyExported,
+    dailyGridImport,
+    selfConsumptionRate,
+    autonomyPct,
+    solarCost,
+    batteryCost,
+    totalCost,
+    annualSavings,
+    annualGridSavings,
+    annualExportRevenue,
+    paybackYears,
+    lifespan25yr,
+    co2Annual,
+    effectiveSunHours,
+    confidence,
+    budget,
+    goal,
+    includeBattery,
+    tariff,
+    fit,
+    bill,
+    breakdown: inputMode === 'appliances' ? getApplianceBreakdown() : null
+  });
+}
+
+// ============================================================
+// RENDER RESULTS
+// ============================================================
+function fmt(n, d = 1) { return Number(n).toFixed(d); }
+function fmtCost(n) { return '$' + Math.round(n).toLocaleString(); }
+function goalLabel(g) {
+  return {selfuse:'Reduce Bills',offgrid:'Off-Grid',export:'Maximise Export',backup:'Backup Power',balanced:'Balanced'}[g] || g;
+}
+
+function renderResults(r) {
+  const el = document.getElementById('resultsContent');
+
+  const budgetLabel = systemNames[r.budget];
+  const goalColors = { selfuse:'#5fdb7e', offgrid:'#f5a623', export:'#3cb8ff', backup:'#ff8844', balanced:'#c8a8ff' };
+  const goalCol = goalColors[r.goal] || '#f5a623';
+
+  // Usage breakdown bar (top 5 appliances or just two segments)
+  let barHtml = '';
+  if (r.breakdown) {
+    const colors = ['#f5a623','#5fdb7e','#3cb8ff','#ff8844','#c8a8ff','#ff6688'];
+    const top5 = r.breakdown.slice(0, 5);
+    barHtml = `
+      <div class="usage-breakdown">
+        <div class="usage-bar-wrap">
+          ${top5.map((a, i) => `<div class="usage-segment" style="width:${a.pct.toFixed(1)}%;background:${colors[i]};"></div>`).join('')}
+        </div>
+        <div class="usage-legend">
+          ${top5.map((a, i) => `<span><span class="dot" style="background:${colors[i]}"></span>${a.name.replace(/[^\x00-\x7F]/g,'')} (${fmt(a.pct,0)}%)</span>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="result-section" style="animation-delay:0.0s">
+      <div class="result-section-title">Your Daily Demand</div>
+      <div class="big-metric">
+        <div class="big-num">${fmt(r.dailyUsage)}</div>
+        <div class="big-unit">kWh/day</div>
+      </div>
+      <div class="big-label">~${fmt(r.dailyUsage * 30, 0)} kWh/month · Goal: ${goalLabel(r.goal)}</div>
+      ${barHtml}
+    </div>
+
+    <div class="result-section" style="animation-delay:0.06s">
+      <div class="result-section-title">Recommended Solar System</div>
+      <div class="rec-highlight">
+        <div class="rec-highlight-title">☀️ Solar Panels</div>
+        <div class="rec-highlight-val">${fmt(r.solarKw, 1)} kW system</div>
+        <div class="rec-highlight-sub">${r.panelCount} × ${r.panelWatts}W panels · ${fmt(r.inverterKw, 1)} kW inverter · ${budgetLabel}</div>
+      </div>
+      ${r.includeBattery ? `
+      <div class="rec-highlight rec-green">
+        <div class="rec-highlight-title">🔋 Battery Storage</div>
+        <div class="rec-highlight-val">${r.batteryKwh} kWh</div>
+        <div class="rec-highlight-sub">${r.batteryUnits} × ~10kWh unit${r.batteryUnits > 1 ? 's' : ''} · covers evening & overnight usage</div>
+      </div>` : ''}
+      <div class="metric-row">
+        <span class="metric-key">Daily generation (est.)</span>
+        <span class="metric-val sun-color">${fmt(r.dailyGeneration)} kWh</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-key">Self-consumed daily</span>
+        <span class="metric-val green-color">${fmt(r.dailySelfConsumed)} kWh</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-key">Exported to grid</span>
+        <span class="metric-val">${fmt(r.dailyExported)} kWh</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-key">Remaining grid import</span>
+        <span class="metric-val">${fmt(r.dailyGridImport)} kWh</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-key">Grid autonomy</span>
+        <span class="metric-val sun-color">${r.autonomyPct}%</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-key">Effective sun hours</span>
+        <span class="metric-val">${fmt(r.effectiveSunHours)} hrs/day</span>
+      </div>
+    </div>
+
+    <div class="savings-callout" style="margin-bottom:0;border-radius:0;border-left:none;border-right:none;animation-delay:0.12s">
+      <div class="savings-label">Estimated Annual Savings</div>
+      <div class="savings-amount">${fmtCost(r.annualSavings)}</div>
+      <div class="savings-period">~${fmtCost(r.annualSavings / 12)}/month bill reduction</div>
+      <div class="payback">
+        Payback period: <strong style="color:var(--sun);">${r.paybackYears > 0 ? fmt(r.paybackYears, 1) + ' years' : 'N/A'}</strong>
+        &nbsp;·&nbsp; 25yr return: <strong style="color:#5fdb7e;">${fmtCost(r.lifespan25yr)}</strong>
+      </div>
+    </div>
+
+    <div class="result-section" style="animation-delay:0.18s">
+      <div class="result-section-title">Cost Estimate (Supply & Install)</div>
+      <div class="metric-row">
+        <span class="metric-key">Solar panels + inverter</span>
+        <span class="metric-val">${fmtCost(r.solarCost)}</span>
+      </div>
+      ${r.includeBattery ? `<div class="metric-row">
+        <span class="metric-key">Battery storage</span>
+        <span class="metric-val">${fmtCost(r.batteryCost)}</span>
+      </div>` : ''}
+      <div class="metric-row">
+        <span class="metric-key">Installation & cabling</span>
+        <span class="metric-val">${fmtCost(r.totalCost - r.solarCost - r.batteryCost)}</span>
+      </div>
+      <div class="metric-row" style="border-top:1px solid rgba(245,242,235,0.12);padding-top:10px;margin-top:4px;">
+        <span class="metric-key" style="font-weight:600;color:var(--bg);">Total Estimated Cost</span>
+        <span class="metric-val sun-color" style="font-size:15px;font-weight:600;">${fmtCost(r.totalCost)}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-key">Annual grid savings</span>
+        <span class="metric-val green-color">${fmtCost(r.annualGridSavings)}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-key">Annual export revenue (${fmt(r.fit,0)}¢ FiT)</span>
+        <span class="metric-val green-color">${fmtCost(r.annualExportRevenue)}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-key">CO₂ offset (annual)</span>
+        <span class="metric-val green-color">${fmt(r.co2Annual / 1000, 2)} tonnes</span>
+      </div>
+    </div>
+
+    <div class="confidence-bar" style="animation-delay:0.24s">
+      <div class="confidence-label">
+        <span>Estimate confidence</span>
+        <span>${r.confidence}%</span>
+      </div>
+      <div class="confidence-track">
+        <div class="confidence-fill" style="width:${r.confidence}%"></div>
+      </div>
+    </div>
+  `;
+
+  // Scroll results into view on mobile
+  if (window.innerWidth < 900) {
+    document.getElementById('resultsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+</script>
+</body>
+</html>
